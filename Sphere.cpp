@@ -21,9 +21,16 @@ float Sphere::intersect(glm::vec3 p0, glm::vec3 dir) {
 
 	if(delta < 0.001) return -1.0;    //includes zero and negative values
 
+	p0 = transform * glm::vec4(p0, 1.0);
+    dir = transform * glm::vec4(dir, 0.0);
+	float tScale = glm::length(dir);
+	dir = glm::normalize(dir);
+
+
 	float t1 = -b - sqrt(delta);
 	float t2 = -b + sqrt(delta);
-
+	t1 /= tScale;
+	t2 /= tScale;
 	if (t1 < 0)
 	{
 		return (t2 > 0) ? t2 : -1;
@@ -36,7 +43,9 @@ float Sphere::intersect(glm::vec3 p0, glm::vec3 dir) {
 * Assumption: The input point p lies on the sphere.
 */
 glm::vec3 Sphere::normal(glm::vec3 p) {
+	p = transform * glm::vec4(p, 1.0);
 	glm::vec3 n = p - center;
+	n = normalTransform * glm::vec4(n, 0.0);
 	n = glm::normalize(n);
 	return n;
 }

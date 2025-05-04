@@ -1,7 +1,7 @@
 /*----------------------------------------------------------
 * COSC363  Ray Tracer
 *
-*  The plane class
+*  The Plane class
 *  This is a subclass of SceneObject, and hence implements the
 *  methods intersect() and normal().
 -------------------------------------------------------------*/
@@ -9,42 +9,61 @@
 #include "Plane.h"
 #include <math.h>
 
-/**
-* Sphere's intersection method.  The input is a ray.
-* Use the poing a be a central and have size weidth*height
-*/
-
-
 float Plane::intersect(glm::vec3 p0, glm::vec3 dir) {
-	//p0+td=p,(p-a).n=0 >>  t=(a-p0).n/d.n
-	float t = glm::dot(point - p0, normalVec) / glm::dot(dir, normalVec);
-	if (t < 0) return -1.0;
+	glm::vec3 n = normal(p0);
+	glm::vec3 vdif = a_ - p0;
+	float d_dot_n = glm::dot(dir, n);
+	if (fabs(d_dot_n) < 1.e-4) return -1;   //Ray parallel to the plane
 
-	glm::vec3 p = p0 + t * dir;
-	glm::vec3 u = glm::normalize(glm::cross(normalVec, glm::vec3(0, 1, 0)));
-	glm::vec3 v = glm::normalize(glm::cross(normalVec, u));
-	// u and v is this plane
-	//point is mid point on the plane, local is the ray p's distence to point
-	glm::vec3 local = p - point;
-	//p to u on plan
-	float uDist = glm::dot(local, u);
-	//p to v on plan
-	float vDist = glm::dot(local, v);
-	//Outside bounds
-	if (fabs(uDist) > width / 2 || fabs(vDist) > height / 2) {
-		return -1; 
-	}
+	float t = glm::dot(vdif, n) / d_dot_n;
+	if (t < 0) return -1;
 
-	return t;
+	glm::vec3 q = p0 + dir * t; //Point of intersection
+	if (isInside(q)) return t; //Inside the plane
+	else return -1; //Outside
 
 }
 
 /**
 * Returns the unit normal vector at a given point.
-* Assumption: The input point p lies on the sphere.
+* Assumption: The input point p lies on the plane.
 */
 glm::vec3 Plane::normal(glm::vec3 p) {
-	return normalVec;
+	glm::vec3 v1 = c_ - b_;
+	glm::vec3 v2 = a_ - b_;
+	glm::vec3 n = glm::cross(v1, v2);
+	n = glm::normalize(n);
+	return n;
 }
+
+/**
+*
+* Checks if a point q is inside the current polygon
+* See slide Lec09-Slide 33
+*/
+bool Plane::isInside(glm::vec3 q) {
+	glm::vec3 n = normal(q);     //Normal vector at the point of intersection
+	glm::vec3 ua = b_ - a_, ub = c_ - b_, uc = d_ - c_, ud = a_ - d_;
+	glm::vec3 va = q - a_, vb = q - b_, vc = q - c_, vd = q - d_;
+	if (nverts_ == 3) uc = a_ - c_;
+	float ka = glm::dot(glm::cross(ua, va), n);
+	float kb = glm::dot(glm::cross(ub, vb), n);
+	float kc = glm::dot(glm::cross(uc, vc), n);
+	float kd;
+	if (nverts_ == 4)
+		kd = glm::dot(glm::cross(ud, vd), n);
+	else
+		kd = ka;
+	if (ka > 0 && kb > 0 && kc > 0 && kd > 0) return true;
+	if (ka < 0 && kb < 0 && kc < 0 && kd < 0) return true;
+	else return false;
+}
+
+
+//Getter function for number of vertices
+int  Plane::getNumVerts() {
+	return nverts_;
+}
+
 
 

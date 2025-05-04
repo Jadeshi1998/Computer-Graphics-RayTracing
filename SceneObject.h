@@ -27,12 +27,17 @@ protected:
 	float tranc_ = 0.8;  //coefficient of transparency
 	float refri_ = 1.0;  //refractive index
 	float shin_ = 50.0; //shininess
+
+	glm::mat4 transform = glm::mat4(1.0);
+	glm::mat4 inverseTransform = glm::mat4(1.0);
+	glm::mat4 normalTransform = glm::mat4(1.0);
+
 public:
 	SceneObject() {}
 	virtual float intersect(glm::vec3 p0, glm::vec3 dir) = 0;
 	virtual glm::vec3 normal(glm::vec3 pos) = 0;
 	virtual ~SceneObject() {}
-
+	void setTransform(glm::mat4 transform);
 	glm::vec3 lighting(glm::vec3 lightPos, glm::vec3 viewVec, glm::vec3 hit);
 	void setColor(glm::vec3 col);
 	void setReflectivity(bool flag);
@@ -53,6 +58,7 @@ public:
 	bool isRefractive();
 	bool isSpecular();
 	bool isTransparent();
+
 };
 
 #endif

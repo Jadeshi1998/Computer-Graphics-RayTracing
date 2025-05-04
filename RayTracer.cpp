@@ -16,8 +16,9 @@
 #include "Plane.h"
 #include "Cylinder.h"
 #include "Cone.h"
-
+#include <glm/gtc/random.hpp>
 #include <GL/freeglut.h>
+#include <glm/gtc/matrix_transform.hpp>
 using namespace std;
 
 const float EDIST = 10.0;
@@ -31,13 +32,22 @@ const float YMAX = 10.0;
 vector<SceneObject*> sceneObjects;
 
 
+glm::vec3 diskRand(float radius) {
+	float angle = glm::linearRand(0.0f, 2.0f * 3.14159f); // Random angle
+	float r = glm::linearRand(0.0f, radius); // Random radius within the disk
+	return glm::vec3(r * cos(angle), r * sin(angle), 0.0f); // 2D point on the disk in X,Y
+}
+
 //---The most important function in a ray tracer! ---------------------------------- 
 //   Computes the colour value obtained by tracing a ray and finding its 
 //     closest point of intersection with objects in the scene.
 //----------------------------------------------------------------------------------
 glm::vec3 trace(Ray ray, int step) {
 	glm::vec3 backgroundCol(0);						//Background colour = (0,0,0)
-	glm::vec3 lightPos(0, 15, 13);					//Light's position
+	//Multiple light and shadows
+	glm::vec3 lightPos1(10, 15, 13);					//Light1's position
+	glm::vec3 lightPos2(-10, 15, 13);                   //Light2's position
+
 	glm::vec3 color(0);
 	SceneObject* obj;
 
@@ -47,28 +57,45 @@ glm::vec3 trace(Ray ray, int step) {
 	glm::vec3 hitPoint = ray.hit;
 	glm::vec3 normal = obj->normal(hitPoint);
 	glm::vec3 viewVec = -ray.dir;
-	//////////////////shadows//////////////////
-	color = obj->lighting(lightPos ,-ray.dir, ray.hit);	//Object's lighting
 
-	glm::vec3 lightVec = lightPos - ray.hit;// add shadows 
-	Ray shadowRay(ray.hit, lightVec);
-	
-	float lightDist = glm::length(lightVec); //distance from the light to the hit point
-	shadowRay.closestPt(sceneObjects); //the first object(ball) hit by the shadow ray
-	if(shadowRay.index > -1 && shadowRay.dist < lightDist){
-		color = 0.2f * obj->getColor(); //0.2 = ambient scale factor
+
+	//////////////////Multiple Lights shadows//////////////////
+	//ambientTerm , diffuseTerm and specularTerm are in SceneObject::lighting();
+	//base on a ambient, if the obj not in shadows, 
+	float ambient_factor = 0.2f;
+	glm::vec3 ambient = ambient_factor * obj->getColor();
+	color = ambient;
+
+	// add shadows for light 1
+	glm::vec3 lightVec1 = lightPos1 - ray.hit;
+	Ray shadowRay1(ray.hit, lightVec1);
+	float lightDist1 = glm::length(lightVec1); //distance from the light to the hit point
+	shadowRay1.closestPt(sceneObjects); //the first object(ball) hit by the shadow ray
+	if (shadowRay1.index == -1 || shadowRay1.dist > lightDist1) {
+		color += obj->lighting(lightPos2, -ray.dir, ray.hit);
 	}
+
+
+	// add shadows for light 2 
+	glm::vec3 lightVec2 = lightPos2 - ray.hit;
+	Ray shadowRay2(ray.hit, lightVec2);
+	float lightDist2 = glm::length(lightVec2); //distance from the light to the hit point
+	shadowRay2.closestPt(sceneObjects); //the first object(ball) hit by the shadow ray
+	if (shadowRay2.index == -1 || shadowRay2.dist > lightDist2) {
+		color += obj->lighting(lightPos2, -ray.dir, ray.hit);
+	}
+
 
 	//////////////////reflection////////////////////////
-	if (step < MAX_STEPS && obj->isReflective()) {
-		glm::vec3 reflectionDir = glm::reflect(ray.dir, normal);
-		Ray reflectionRay(hitPoint + 0.01f * reflectionDir, reflectionDir);
-		glm::vec3 reflectionColor = trace(reflectionRay, step + 1);
-
-		float reflCoeff = obj->getReflectionCoeff();
-		color = (1.0f - reflCoeff) * color + reflCoeff * reflectionColor;
+	if (obj->isReflective() && step < MAX_STEPS)
+	{
+		float rho = obj->getReflectionCoeff();
+		glm::vec3 normalVec = obj->normal(ray.hit);
+		glm::vec3 reflectedDir = glm::reflect(ray.dir, normalVec);
+		Ray reflectedRay(ray.hit, reflectedDir);
+		glm::vec3 reflectedColor = trace(reflectedRay, step + 1);
+		color = color + (rho * reflectedColor);
 	}
-
 	//////////////////Transparency////////////////////////
 	if (step < MAX_STEPS && obj->isTransparent()) {
 		Ray gray = Ray(hitPoint, ray.dir);
@@ -82,9 +109,25 @@ glm::vec3 trace(Ray ray, int step) {
 		}
 	}
 
+	////////////// Chessboard pattern //////////////////
+	if (ray.index == 0)
+	{
+		int tileSize = 1;
+		int ix = int(ray.hit.x / tileSize);
+		int iz = int(ray.hit.z / tileSize);
+		int k = (ix + iz) % 2;
+
+		glm::vec3 checkerColor;
+		if (k == 0) checkerColor = glm::vec3(1.0, 1.0, 1.0);
+		else        checkerColor = glm::vec3(0.2, 0.2, 0.2);
+
+		obj->setColor(checkerColor);
+	}
 
 	return color;
 }
+
+
 
 //---The main display module -----------------------------------------------------------
 // In a ray tracing application, it just displays the ray traced image by drawing
@@ -129,73 +172,160 @@ void display() {
 //     and add them to the list of scene objects.
 //   It also initializes the OpenGL 2D orthographc projection matrix for drawing the
 //     the ray traced image.
+// | Hex Code | RGB (0–255)       | `glm::vec3(r, g, b)` |
+//---------- | ------------------ - | ---------------------- - |
+// `#7400B8`| (116, 0, 184) | `glm::vec3(0.455, 0.0, 0.722)` |
+// `#6930C3`| (105, 48, 195) | `glm::vec3(0.412, 0.188, 0.765)` |
+// `#5E60CE`| (94, 96, 206) | `glm::vec3(0.369, 0.376, 0.808)` |
+// `#5390D9`| (83, 144, 217) | `glm::vec3(0.325, 0.565, 0.851)` |
+// `#4EA8DE`| (78, 168, 222) | `glm::vec3(0.306, 0.659, 0.871)` |
+// `#48BFE3`| (72, 191, 227) | `glm::vec3(0.282, 0.749, 0.89)` |
+// `#56CFE1`| (86, 207, 225) | `glm::vec3(0.337, 0.812, 0.882)` |
+// `#64DFDF`| (100, 223, 223) | `glm::vec3(0.392, 0.875, 0.875)` |
+// `#72EFDD`| (114, 239, 221) | `glm::vec3(0.447, 0.937, 0.867)` |
+// `#80FFDB`| (128, 255, 219) | `glm::vec3(0.502, 1.0, 0.859)` |
+// 
+// 
 //----------------------------------------------------------------------------------
 void initialize() {
 	glMatrixMode(GL_PROJECTION);
 	gluOrtho2D(XMIN, XMAX, YMIN, YMAX);
 
 	glClearColor(0, 0, 0, 1);
+	Plane* tableTop = new Plane(
+		glm::vec3(-20, -17, -30),
+		glm::vec3(-20, -17, -19),
+		glm::vec3(20, -17, -19),
+		glm::vec3(20, -17, -30)
+	);
+	tableTop->setColor(glm::vec3(0)); // wood 
+	sceneObjects.push_back(tableTop);
 
-	Plane* plane1 = new Plane(glm::vec3(0, -20, 0), glm::vec3(0, 1, 0),150.,150.); //Plane at y=-10
-	plane1->setColor(glm::vec3(1, 1, 0)); //Set colour to yellow
-	sceneObjects.push_back(plane1);
-	Plane* plane2 = new Plane(glm::vec3(0, 20, 0), glm::vec3(0, -1, 0),150., 150.); //Plane at y=10(noraml filp)
-	plane2->setColor(glm::vec3(1, 0, 0)); //Set colour to green
-	sceneObjects.push_back(plane2);
-	Plane* plane3 = new Plane(glm::vec3(-25, 0, 0), glm::vec3(1, 0, 0),150., 150.); //Plane at x=-10
-	plane3->setColor(glm::vec3(0, 0, 1)); //Set colour to blue
-	sceneObjects.push_back(plane3);
-	Plane* plane4 = new Plane(glm::vec3(25, 0, 0), glm::vec3(-1, 0, 0), 150., 150.); //Plane at x=-10(noraml filp)
-	plane4->setColor(glm::vec3(0, 1, 0)); //Set colour to green
-	sceneObjects.push_back(plane4);
-	Plane* plane5 = new Plane(glm::vec3(0, 0, -40), glm::vec3(0, 0, 1), 150., 150.); //Plane at z=-10
-	plane5->setColor(glm::vec3(0, 1, 1)); //Set colour to cyne
-	sceneObjects.push_back(plane5);
-	plane5->setSpecularity(false);
-	Plane* plane6 = new Plane(glm::vec3(0, 0, 50), glm::vec3(0, 0, -1), 150., 150.); //Plane at z=-50
-	plane6->setColor(glm::vec3(1, 1, 1));//Set colour to white
-	//not visible, behind eye
-	sceneObjects.push_back(plane6);
+	Plane* bottomPlane = new Plane(
+		glm::vec3(30, -25, 40),
+		glm::vec3(30, -25, -40),
+		glm::vec3(-30, -25, -40),
+		glm::vec3(-30, -25, 40)
+	
+	);
+	bottomPlane->setColor(glm::vec3(0.306, 0.659, 0.871)); 
+	sceneObjects.push_back(bottomPlane);
+
+
+	Plane* topPlane = new Plane(
+		glm::vec3(-30, 25, -40),
+		glm::vec3(30, 25, -40),
+		glm::vec3(30, 25, 40),
+		glm::vec3(-30, 25, 40)
+	);
+	topPlane->setColor(glm::vec3(0.392, 0.875, 0.875));
+	sceneObjects.push_back(topPlane);
+
+	Plane* leftPlane = new Plane(
+		glm::vec3(-30, -25, -40),
+		glm::vec3(-30, 25, -40),
+		glm::vec3(-30, 25, 40),
+		glm::vec3(-30, -25, 40)
+	);
+	leftPlane->setColor(glm::vec3(0.455, 0.0, 0.722));
+	sceneObjects.push_back(leftPlane);
+
+
+	Plane* rightPlane = new Plane(
+		glm::vec3(30, 25, -40),
+		glm::vec3(30, -25, -40),
+		glm::vec3(30, -25, 40),
+		glm::vec3(30, 25, 40)
+	);
+	rightPlane->setColor(glm::vec3(0.502, 1.0, 0.859));
+	sceneObjects.push_back(rightPlane);
+
+
+	Plane* backPlane = new Plane(
+		glm::vec3(-30, -25, -40),
+		glm::vec3(30, -25, -40),
+		glm::vec3(30, 25, -40),
+		glm::vec3(-30, 25, -40)
+	);
+	backPlane->setColor(glm::vec3(0.412, 0.188, 0.765));
+	sceneObjects.push_back(backPlane);
+
+	Plane* behindPlane = new Plane(
+		glm::vec3(-30, 25, 40),
+		glm::vec3(30, 25, 40),
+		glm::vec3(30, -25, 40),
+		glm::vec3(-30, -25, 40)
+	);
+	behindPlane->setColor(glm::vec3(0, 1, 1 ));
+	sceneObjects.push_back(behindPlane);
+
 	//This Plane is a mirror
-	Plane* mirrorPlane = new Plane(glm::vec3(0, 10, -40), glm::normalize(glm::vec3(0, -0.8, 1)),40.,40.);
+	Plane* mirrorPlane = new Plane(
+		glm::vec3(20, 5, -25),
+		glm::vec3(20, -17, -29),
+		glm::vec3(-20, -17, -39),
+		glm::vec3(-20, 5, -35)
+	);
 	mirrorPlane->setColor(glm::vec3(0));                 
 	mirrorPlane->setReflectivity(true, 1.0);           
 	sceneObjects.push_back(mirrorPlane);
 
 
-	Sphere *sphere1 = new Sphere(glm::vec3(-10.0, -8.0, -25.0), 3);
-	sphere1->setColor(glm::vec3(0, 0, 1));  //Set colour to blue
-	sphere1->setTransparency(true,0.3);
+
+	Cylinder* leg1 = new Cylinder(glm::vec3(-10.0, -22.0, -30.0), 0.5, 5.0); 
+	leg1->setColor(glm::vec3(0.4, 0.2, 0.1)); 
+	sceneObjects.push_back(leg1);
+	Cylinder* leg2 = new Cylinder(glm::vec3(10.0, -22.0, -30.0), 0.5, 5.0); 
+	leg2->setColor(glm::vec3(0.4, 0.2, 0.1)); 
+	sceneObjects.push_back(leg2);
+	Cylinder* leg3 = new Cylinder(glm::vec3(-10.0, -22.0, -20.0), 0.5, 5.0); 
+	leg3->setColor(glm::vec3(0.4, 0.2, 0.1)); 
+	sceneObjects.push_back(leg3);
+	Cylinder* leg4 = new Cylinder(glm::vec3(10.0, -22.0, -20.0), 0.5, 5.0); 
+	leg4->setColor(glm::vec3(0.4, 0.2, 0.1)); 
+	sceneObjects.push_back(leg4);
+
+
+	Sphere *sphere1 = new Sphere(glm::vec3(-12.0, -5.0, -23.0), 3);
+	sphere1->setColor(glm::vec3(0.369, 0.376, 0.808));  //Set colour to blue
+	sphere1->setTransparency(true,0.6);
 	sceneObjects.push_back(sphere1);	
 
 	//sphere1->setSpecularity(false); 
 	//sphere1->setShininess(5); //Set shininess to 5
 
-	Sphere* sphere2 = new Sphere(glm::vec3(0.0, -8.0, -25.0), 3);
-	sphere2->setColor(glm::vec3(1, 0, 0));   //Set colour to red
+	Sphere* sphere2 = new Sphere(glm::vec3(0.0, -5.0, -23.0), 3);
+	sphere2->setColor(glm::vec3(0.412, 0.188, 0.765));  
 	sceneObjects.push_back(sphere2);		 //Add sphere to scene objects
 
-	Sphere* sphere3 = new Sphere(glm::vec3(10.0, -8.0, -25.0), 3);
+
+	float CDR = 3.14159265 / 180.0;
+	glm::mat4 t = glm::mat4(1.0);
+	t = glm::translate(t, glm::vec3(20.0, -2.0, -30.0));
+	t = glm::rotate(t, 15 * CDR, glm::vec3(0.0, 1.0, 0.0));
+	t = glm::scale(t, glm::vec3(3.0, 1.0, 1.0));
+	Sphere* sphere3 = new Sphere(glm::vec3(12.0, -5.0, -23.0), 3);
+	sphere3->setTransform(t);
 	sphere3->setColor(glm::vec3(0, 1, 1));   //Set colour to cyan
 	sceneObjects.push_back(sphere3);		 //Add sphere to scene objects
-
-	Sphere* sphere4 = new Sphere(glm::vec3(10.0, -20.0, -20.0), 1);
-	sphere4->setColor(glm::vec3(1, 1, 1));   //Set colour to white
-	sceneObjects.push_back(sphere4);		 //Add sphere to scene objects
 	
-	Cylinder* cylinder1 = new Cylinder(glm::vec3(10.0, -20.0, -25.0), 2.5, 8.);
-	cylinder1->setColor(glm::vec3(0, 0, 0));
-	cylinder1->setReflectivity(true, 1);
+	Cylinder* cylinder1 = new Cylinder(glm::vec3(12.0, -17.0, -23.0), 2.5, 8.);
+	cylinder1->setColor(glm::vec3(0, 0, 1));
+	//cylinder1->setReflectivity(true, 1);
 	sceneObjects.push_back(cylinder1);
 
-	Cylinder* cylinder2 = new Cylinder(glm::vec3(-10.0, -20.0, -25.0), 2.5, 8.);
-	cylinder2->setColor(glm::vec3(0.5, 0.5, 1));
+	Cylinder* cylinder2 = new Cylinder(glm::vec3(-12.0, -17.0, -23.0), 2.5, 8.);
+	cylinder2->setColor(glm::vec3(1 , 0 , 0));
+	//cylinder2->setReflectivity(true, 1);
 	sceneObjects.push_back(cylinder2);
 
-	Cone* cone1 = new Cone(glm::vec3(0.0, -20.0, -25.0), 2.5, 8.);
-	cone1->setColor(glm::vec3(1, 0.5, 0.5));
+	Cone* cone1 = new Cone(glm::vec3(0.0, -17.0, -23.0), 2.5, 8.);
+	cone1->setColor(glm::vec3(1.0, 0.843, 0.0));
 	sceneObjects.push_back(cone1);
 
+	Cone* cone2 = new Cone(glm::vec3(-17.0, -17.0, -27.0), 3.0, 20.);
+	cone2->setColor(glm::vec3(1.0, 0.078, 0.576));
+	sceneObjects.push_back(cone2);
 
 
 }

@@ -14,12 +14,13 @@ glm::vec3 SceneObject::getColor() {
 }
 
 glm::vec3 SceneObject::lighting(glm::vec3 lightPos, glm::vec3 viewVec, glm::vec3 hit) {
-	float ambientTerm = 0.2;
+	float ambientTerm = 0;
 	float diffuseTerm = 0;
 	float specularTerm = 0;
 	glm::vec3 normalVec = normal(hit);
 	glm::vec3 lightVec = lightPos - hit;
 	lightVec = glm::normalize(lightVec);
+    //diffuse
 	float lDotn = glm::dot(lightVec, normalVec);
 	if (spec_)
 	{
@@ -107,4 +108,10 @@ void SceneObject::setTransparency(bool flag) {
 void SceneObject::setTransparency(bool flag, float tran_coeff) {
 	tran_ = flag;
 	tranc_ = tran_coeff;
+}
+
+void SceneObject::setTransform(glm::mat4 transform) {
+    normalTransform = glm::transpose(transform);
+	inverseTransform = glm::inverse(transform);
+
 }

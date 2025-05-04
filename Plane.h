@@ -1,34 +1,46 @@
 /*----------------------------------------------------------
 * COSC363  Ray Tracer
 *
-*  The plane class
+*  The Plane class
 *  This is a subclass of SceneObject, and hence implements the
 *  methods intersect() and normal().
 -------------------------------------------------------------*/
 
 #ifndef H_PLANE
 #define H_PLANE
+
 #include <glm/glm.hpp>
 #include "SceneObject.h"
-#include <math.h>
 
-/*
- * Defines a simple Plane use 1 point a and a normal vector n.
- * with the specified radius
- */
-class Plane :public SceneObject {
+class Plane : public SceneObject
+{
 private:
-	glm::vec3 point; //mid point on the plane
-	glm::vec3 normalVec; //normal vector of the plane
-    float width;
-    float height;
+	glm::vec3 a_ = glm::vec3(0);   //The vertices of the quad
+	glm::vec3 b_ = glm::vec3(0);
+	glm::vec3 c_ = glm::vec3(0);
+	glm::vec3 d_ = glm::vec3(0);
+	int nverts_ = 4;				//Number of vertices (3 or 4)
 
 public:
-	Plane() {}; //Default constructor creates a unit plane
-    Plane(glm::vec3 pt, glm::vec3 norm, float w, float h) : point(pt), normalVec(norm), width(w), height(h) {};
+	Plane() = default;
 
-    float intersect(glm::vec3 p0, glm::vec3 dir);
+	Plane(glm::vec3 pa, glm::vec3 pb, glm::vec3 pc, glm::vec3 pd) :
+		a_(pa), b_(pb), c_(pc), d_(pd), nverts_(4) {
+	}
 
-    glm::vec3 normal(glm::vec3 p);
+	Plane(glm::vec3 pa, glm::vec3 pb, glm::vec3 pc) :
+		a_(pa), b_(pb), c_(pc), nverts_(3) {
+	}
+
+
+	bool isInside(glm::vec3 pt);
+
+	float intersect(glm::vec3 posn, glm::vec3 dir);
+
+	int getNumVerts();
+
+	glm::vec3 normal(glm::vec3 pt);
+
 };
+
 #endif //!H_PLANE
