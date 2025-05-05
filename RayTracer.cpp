@@ -16,7 +16,7 @@
 #include "Plane.h"
 #include "Cylinder.h"
 #include "Cone.h"
-//#include "TextureOpenIL.h" 
+#include "TextureOpenIL.h" 
 #include <glm/gtc/random.hpp>
 #include <GL/freeglut.h>
 #include <glm/gtc/matrix_transform.hpp>
@@ -34,7 +34,7 @@ const float YMIN = -10.0;
 const float YMAX = 10.0;
 
 vector<SceneObject*> sceneObjects;
-//TextureOpenIL texture;
+TextureOpenIL texture;
 
 glm::vec3 diskRand(float radius) {
 	float angle = glm::linearRand(0.0f, 2.0f * 3.14159f); // Random angle
@@ -125,10 +125,10 @@ glm::vec3 trace(Ray ray, int step) {
 		Ray hray = Ray(gray.hit,gray.dir);
 		hray.closestPt(sceneObjects);
 		float tranCoeff = obj->getTransparencyCoeff();
-		if (hray.index > -1) {
-			SceneObject* behindobj = sceneObjects[hray.index];
-			color = tranCoeff * color + (1.0f - tranCoeff) * behindobj->getColor();
-		}
+
+		trace(hray, step + 1);
+		color = tranCoeff * color + (1.0f - tranCoeff) * trace(hray, step + 1);
+		
 	}
 
 	////////////// Chessboard pattern //////////////////
@@ -144,22 +144,19 @@ glm::vec3 trace(Ray ray, int step) {
 		else        checkerColor = glm::vec3(0.2, 0.2, 0.2);
 
 		obj->setColor(checkerColor);
+		float x1 = -15, x2 = 15, z1 = -30, z2 = -20;
+		float texcoords = (ray.hit.x - x1) / (x2 - x1);
+		float texcoordt = (ray.hit.z - z1) / (z2 - z1);
+		if (texcoords > 0 && texcoords < 1 && texcoordt > 0 && texcoordt < 1) {
+			color = texture.getColorAt(texcoords, texcoordt);
+			obj->setColor(color);
 
-		
 
+		}
 	}
 
-	///////////////////////Texture mapping ////////////////
-	//
-	//
-	//float x1 = -15, x2 = 15, z1 = -30, z2 = -20;
-	//float texcoords = (ray.hit.x - x1) / (x2 - x1);
-	//float texcoordt = (ray.hit.z - z1) / (z2 - z1);
-	//if (texcoords > 0 && texcoords < 1 && texcoordt > 0 && texcoordt < 1) {
-	//	color = texture.getColorAt(texcoords, texcoordt);
-	//	obj->setColor(color);
-	//}
-	//return color;
+	
+	return color;
 }
 
 
@@ -225,7 +222,7 @@ void display() {
 void initialize() {
 	glMatrixMode(GL_PROJECTION);
 	gluOrtho2D(XMIN, XMAX, YMIN, YMAX);
-	//texture = TextureOpenIL("Flowers.jpg");
+	texture = TextureOpenIL("Flowers.jpg");
 
 	glClearColor(0, 0, 0, 1);
 	Plane* tableTop = new Plane(
