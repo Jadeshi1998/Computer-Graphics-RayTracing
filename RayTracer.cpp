@@ -52,8 +52,11 @@ glm::vec3 trace(Ray ray, int step) {
 	glm::vec3 lightPos1(20, 23, 15);					//Light1's position
 	glm::vec3 lightPos2(-20, 23, 15);                   //Light2's position
 
+
 	glm::vec3 color(0);
-	SceneObject* obj;
+	SceneObject* obj ;
+	SceneObject* ShadowObj1;
+	SceneObject* ShadowObj2;
 
 	ray.closestPt(sceneObjects);					//Compare the ray with all objects in the scene
 	if(ray.index == -1) return backgroundCol;		//no intersection
@@ -63,30 +66,63 @@ glm::vec3 trace(Ray ray, int step) {
 	glm::vec3 viewVec = -ray.dir;
 
 
+
+	///////////////////Spot Light//////////////////////////////
+	glm::vec3 spotLight(0, 5, -5);
+	glm::vec3 spotTarget(0, -15, -40);  //focouse on table
+	glm::vec3 spotDir = glm::normalize(spotTarget - spotLight);
+	float cutoffAngle = 20.0f;
+	float cutoff = glm::cos(glm::radians(cutoffAngle));
+	
 	//////////////////Multiple Lights shadows//////////////////
 	//ambientTerm , diffuseTerm and specularTerm are in SceneObject::lighting();
 	//base on a ambient, if the obj not in shadows, 
 	float ambient_factor = 0.2f;
 	glm::vec3 ambient = ambient_factor * obj->getColor();
-	color = ambient;
+	color += ambient;
 
 	// add shadows for light 1
-	glm::vec3 lightVec1 = lightPos1 - ray.hit;
-	Ray shadowRay1(ray.hit, lightVec1);
-	float lightDist1 = glm::length(lightVec1); //distance from the light to the hit point
-	shadowRay1.closestPt(sceneObjects); //the first object(ball) hit by the shadow ray
-	if (shadowRay1.index == -1 || shadowRay1.dist > lightDist1) {
-		color += obj->lighting(lightPos2, -ray.dir, ray.hit);
+	glm::vec3 lightVec1 = lightPos1 - hitPoint;
+	Ray shadowRay1(hitPoint, lightVec1);
+	shadowRay1.closestPt(sceneObjects);
+	bool inShadow1 = (shadowRay1.index != -1 && shadowRay1.dist < glm::length(lightVec1));
+	if (!inShadow1) {
+		color += obj->lighting(lightPos1, viewVec, hitPoint);
+	}
+	else if (sceneObjects[shadowRay1.index]->isTransparent()) {
+		glm::vec3 totalLight1 = obj->lighting(lightPos1, viewVec, hitPoint);
+		glm::vec3 shadowAmbient1 = 0.2f * obj->getColor();
+		glm::vec3 diffSpec = totalLight1 - shadowAmbient1;
+		color += shadowAmbient1 + 0.8f * diffSpec;
 	}
 
-
 	// add shadows for light 2 
-	glm::vec3 lightVec2 = lightPos2 - ray.hit;
-	Ray shadowRay2(ray.hit, lightVec2);
-	float lightDist2 = glm::length(lightVec2); //distance from the light to the hit point
-	shadowRay2.closestPt(sceneObjects); //the first object(ball) hit by the shadow ray
-	if (shadowRay2.index == -1 || shadowRay2.dist > lightDist2) {
-		color += obj->lighting(lightPos2, -ray.dir, ray.hit);
+	glm::vec3 lightVec2 = lightPos2 - hitPoint;
+	Ray shadowRay2(hitPoint, lightVec2);
+	shadowRay2.closestPt(sceneObjects);
+	bool inShadow2 = (shadowRay2.index != -1 && shadowRay2.dist < glm::length(lightVec2));
+
+	if (!inShadow2) {
+		color += obj->lighting(lightPos2, viewVec, hitPoint);
+	}
+	else if (sceneObjects[shadowRay2.index]->isTransparent()) {
+		glm::vec3 totalLight2 = obj->lighting(lightPos2, viewVec, hitPoint);
+		glm::vec3 shadowAmbient2 = 0.2f * obj->getColor();
+		glm::vec3 diffSpec = totalLight2 - shadowAmbient2;
+		color += shadowAmbient2 + 0.8f * diffSpec;
+	}
+
+	// Spotlight (independent of other lights)
+	glm::vec3 spotLightVec = spotLight - hitPoint;
+	Ray spotShadowRay(hitPoint, glm::normalize(spotLightVec));
+	spotShadowRay.closestPt(sceneObjects);
+	bool inSpotShadow = (spotShadowRay.index != -1 && spotShadowRay.dist < glm::length(spotLightVec));
+	//std::cout << "Spot shadow ray hit object index: " << spotShadowRay.index << std::endl;
+	if (!inSpotShadow) {
+		float angleCos = glm::dot(glm::normalize(-spotLightVec), spotDir);
+		if (angleCos >= cutoff) { // Inside spotlight cone
+			color +=  obj->lighting(spotLight, viewVec, hitPoint);
+		}
 	}
 
 
@@ -94,9 +130,9 @@ glm::vec3 trace(Ray ray, int step) {
 	if (obj->isReflective() && step < MAX_STEPS)
 	{
 		float rho = obj->getReflectionCoeff();
-		glm::vec3 normalVec = obj->normal(ray.hit);
+		glm::vec3 normalVec = obj->normal(hitPoint);
 		glm::vec3 reflectedDir = glm::reflect(ray.dir, normalVec);
-		Ray reflectedRay(ray.hit, reflectedDir);
+		Ray reflectedRay(hitPoint, reflectedDir);
 		glm::vec3 reflectedColor = trace(reflectedRay, step + 1);
 		color = color + (rho * reflectedColor);
 	}
@@ -105,17 +141,41 @@ glm::vec3 trace(Ray ray, int step) {
 	////////////////////Refraction/////////////////////////
 	if (obj->isRefractive() && step < MAX_STEPS)
 	{
-		float eta = obj->getRefractiveIndex();
+		float IOR = obj->getRefractiveIndex();
 		float refrCoeff = obj->getRefractionCoeff();
-		glm::vec3 n = obj->normal(ray.hit);
-		glm::vec3 g = glm::refract(ray.dir, n, eta);
-		Ray refrRay(ray.hit, g);
-		refrRay.closestPt(sceneObjects);
-		glm::vec3 m = obj->normal(refrRay.hit);
-		glm::vec3 h = glm::refract(g, -m, 1.0f / eta);
-		glm::vec3 refrColor = trace(refrRay, step + 1);
-		color = (1.0f - refrCoeff) * color + refrCoeff * refrColor;
 
+		//nIn is the n in lecture note
+		glm::vec3 nIN = obj->normal(hitPoint);
+		float eta = 1.0f / IOR;// comein from air(eg, glass = 1.0/1.5)
+
+		//From inside of obj, inverse 
+		if (glm::dot(ray.dir, nIN) > 0) {
+			nIN = -nIN;
+			eta = IOR;
+		}
+
+		
+		glm::vec3 g = glm::refract(ray.dir, nIN, eta);
+		if (glm::length(g) == 0) {
+			return color;
+		}
+		else if (glm::length(g) > 0) {
+			Ray refrRayinside(hitPoint, g);
+			refrRayinside.closestPt(sceneObjects);
+
+			//nOut is the m in lecture note
+			glm::vec3 nOUT = obj->normal(refrRayinside.hit);
+			if (glm::dot(refrRayinside.dir, nOUT) > 0) {
+				nOUT = -nOUT;
+			}
+			glm::vec3 h = glm::refract(g, nOUT, 1.0f / eta);
+
+			Ray refrRayToOut(refrRayinside.hit, h);
+			refrRayToOut.closestPt(sceneObjects);
+
+			glm::vec3 refrColor = trace(refrRayToOut, step + 1);
+			color = color + refrCoeff * refrColor;
+		}
 	}
 	
 	//////////////////Transparency////////////////////////
@@ -329,8 +389,9 @@ void initialize() {
 	//sphere1->setShininess(5); //Set shininess to 5
 
 	Sphere* sphere2 = new Sphere(glm::vec3(0.0, -5.0, -23.0), 3);
-	sphere2->setColor(glm::vec3(0.412, 0.188, 0.765));  
+	sphere2->setColor(glm::vec3(0, 0, 0));  
 	sceneObjects.push_back(sphere2);		 //Add sphere to scene objects
+	sphere2 ->setReflectivity(true, 1.0);
 
 
 	float CDR = 3.14159265 / 180.0;
@@ -345,7 +406,7 @@ void initialize() {
 	
 	Cylinder* cylinder1 = new Cylinder(glm::vec3(12.0, -17.0, -23.0), 2.5, 8.);
 	cylinder1->setColor(glm::vec3(0.208f, 0.369f, 0.231f));
-	cylinder1->setReflectivity(true, 1);
+	//cylinder1->setReflectivity(true, 1);
 	sceneObjects.push_back(cylinder1);
 	cylinder1->setRefractivity(true, 0.8, 1.5);
 	
@@ -357,8 +418,9 @@ void initialize() {
 	cylinder2->setRefractivity(true, 0.8 , 1.5);
 
 	Cone* cone1 = new Cone(glm::vec3(0.0, -17.0, -23.0), 2.5, 8.);
-	cone1->setColor(glm::vec3(1.0, 0.843, 0.0));
+	cone1->setColor(glm::vec3(0.208, 0.369, 0.231));
 	sceneObjects.push_back(cone1);
+
 
 	Cone* cone2 = new Cone(glm::vec3(-17.0, -17.0, -27.0), 3.0, 20.);
 	cone2->setColor(glm::vec3(0.208, 0.369, 0.231));
