@@ -13,29 +13,58 @@
 * Sphere's intersection method.  The input is a ray. 
 */
 float Sphere::intersect(glm::vec3 p0, glm::vec3 dir) {
+<<<<<<< HEAD
+	//Transform
+	p0 = inverseTransform * glm::vec4(p0, 1.0);
+	dir = inverseTransform * glm::vec4(dir, 0.0);
+	float tScale = glm::length(dir);
+	dir = glm::normalize(dir);
+
+=======
+>>>>>>> 49b74c0dbbc3576294413a2408a4d905ead9192c
 	glm::vec3 vdif = p0 - center;   //Vector s (see Slide 28)
 	float b = glm::dot(dir, vdif);
 	float len = glm::length(vdif);
 	float c = len*len - radius*radius;
 	float delta = b*b - c;
 
+<<<<<<< HEAD
+	if(delta <= 0) return -1;    
+=======
 	if(delta < 0.001) return -1.0;    //includes zero and negative values
 
 	p0 = transform * glm::vec4(p0, 1.0);
     dir = transform * glm::vec4(dir, 0.0);
 	float tScale = glm::length(dir);
 	dir = glm::normalize(dir);
+>>>>>>> 49b74c0dbbc3576294413a2408a4d905ead9192c
 
 
 	float t1 = -b - sqrt(delta);
 	float t2 = -b + sqrt(delta);
 	t1 /= tScale;
 	t2 /= tScale;
+<<<<<<< HEAD
+
+	if (t1 < 0) {
+		if (t2 > 0) {
+			return t2;
+		}
+		else {
+			return -1;
+		}
+	}
+	else {
+		return t1;
+	}
+
+=======
 	if (t1 < 0)
 	{
 		return (t2 > 0) ? t2 : -1;
 	}
 	else return t1;
+>>>>>>> 49b74c0dbbc3576294413a2408a4d905ead9192c
 }
 
 /**
@@ -43,7 +72,11 @@ float Sphere::intersect(glm::vec3 p0, glm::vec3 dir) {
 * Assumption: The input point p lies on the sphere.
 */
 glm::vec3 Sphere::normal(glm::vec3 p) {
+<<<<<<< HEAD
+	p = inverseTransform * glm::vec4(p, 1.0);
+=======
 	p = transform * glm::vec4(p, 1.0);
+>>>>>>> 49b74c0dbbc3576294413a2408a4d905ead9192c
 	glm::vec3 n = p - center;
 	n = normalTransform * glm::vec4(n, 0.0);
 	n = glm::normalize(n);

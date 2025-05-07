@@ -20,6 +20,19 @@ float Cylinder::intersect(glm::vec3 p0, glm::vec3 dir) {
 	float delta = b * b - 4 * a * c;
 	if (delta < 0.001) return -1.0;    //includes zero and negative values
 
+<<<<<<< HEAD
+	float t1 = (-b - sqrt(delta)) / (2 * a);
+	float t2 = (-b + sqrt(delta)) / (2 * a);
+
+	//cut height hit>yc+h(outside) hit<yc+h(under)
+	float t = -1;
+	glm::vec3 intersect1 = p0 + t1 * dir;
+	glm::vec3 intersect2 = p0 + t2 * dir;
+	float bottom = center.y;
+	float top = center.y + height;
+	if (t1 > 0.001) {
+		if (intersect1.y >= bottom && intersect1.y <= top) {
+=======
 	float t1 = ( - b - sqrt(delta)) / (2 * a);
 	float t2 = ( - b + sqrt(delta)) / (2 * a);
 
@@ -29,18 +42,37 @@ float Cylinder::intersect(glm::vec3 p0, glm::vec3 dir) {
 	if (t1 > 0.001) {
 		float y1 = p0.y + t1 * dir.y;
 		if (y1 >= center.y && y1 <= center.y + height) {
+>>>>>>> 49b74c0dbbc3576294413a2408a4d905ead9192c
 			t = t1;
 		}
 	}
 	else {
 		if (t2 > 0.001) {
+<<<<<<< HEAD
+			if ((t < 0 || t2 < t) && intersect2.y >= bottom && intersect2.y <= top) {
+=======
 			float y2 = p0.y + t2 * dir.y;
 			if ((t < 0 || t2 < t) && y2 >= center.y && y2 <= center.y + height) {
+>>>>>>> 49b74c0dbbc3576294413a2408a4d905ead9192c
 				t = t2;
 			}
 		}
 	}
 
+<<<<<<< HEAD
+	// with cap : if the closest point of intersection is above the cylinder and next within
+     if (intersect1.y >= top) {
+		float capt1 = (top - p0.y) / dir.y; // top cap
+		if (capt1 > 0 && intersect2.y <= top && intersect2.y >= bottom) { 
+			t = capt1; 
+		}
+	}
+
+	return t;
+}
+
+
+=======
 	// if the closest point of intersection is above the cylinder and next within
 	if (fabs(dir.y) > 0.01) {
 		float capt1 = (center.y + height - p0.y) / dir.y; // top cap
@@ -63,6 +95,7 @@ float Cylinder::intersect(glm::vec3 p0, glm::vec3 dir) {
 
 		return t;
 	}
+>>>>>>> 49b74c0dbbc3576294413a2408a4d905ead9192c
 
 
 
