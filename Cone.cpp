@@ -43,29 +43,60 @@ float Cone::intersect(glm::vec3 p0, glm::vec3 dir) {
 	//cut height hit>yc+h(outside) hit<yc+h(under)
 	float t = -1;
 	//change y dir to -y reverse 
+<<<<<<< HEAD
 	glm::vec3 intersect1 = p0 + t1 * dir;
 	glm::vec3 intersect2 = p0 + t2 * dir;
 	float bottom = center.y;
 	float top = center.y + height;
 	if (t1 > 0.001) {
 		if (intersect1.y >= bottom && intersect1.y <= top) {
+=======
+
+	if (t1 > 0.001) {
+		float y1 = p0.y + t1 * dir.y;
+		if (y1 >= center.y && y1 <= center.y + height) {
+>>>>>>> 49b74c0dbbc3576294413a2408a4d905ead9192c
 			t = t1;
 		}
 	}
 	else {
 		if (t2 > 0.001) {
+<<<<<<< HEAD
 			if ((t < 0 || t2 < t) && intersect2.y >= bottom && intersect2.y <= top) {
+=======
+			float y2 = p0.y + t2 * dir.y;
+			if ((t < 0 || t2 < t) && y2 >= center.y && y2 <= center.y + height) {
+>>>>>>> 49b74c0dbbc3576294413a2408a4d905ead9192c
 				t = t2;
 			}
 		}
 	}
 
+<<<<<<< HEAD
+=======
+	if (fabs(dir.y) > 0.01) {
+		float capb = (center.y - p0.y) / dir.y;
+		glm::vec3 cap = p0 + capb * dir;
+		if (capb > 0.001 &&
+			glm::length(glm::vec2(cap.x - center.x, cap.z - center.z)) <= radius) {
+			if (t < 0 || capb < t) t = capb;
+		}
+	}
+
+>>>>>>> 49b74c0dbbc3576294413a2408a4d905ead9192c
 	return t;
 }
 
 
 
 glm::vec3 Cone::normal(glm::vec3 p) {
+<<<<<<< HEAD
+=======
+	// bottom cap
+	if (fabs(p.y - center.y) < 0.001f) {
+		return glm::vec3(0, -1, 0);
+	}
+>>>>>>> 49b74c0dbbc3576294413a2408a4d905ead9192c
 
 	// new radius = radius / height
 	glm::vec3 n = glm::vec3(p.x - center.x,

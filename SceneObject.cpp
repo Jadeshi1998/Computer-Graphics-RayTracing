@@ -14,7 +14,11 @@ glm::vec3 SceneObject::getColor() {
 }
 
 glm::vec3 SceneObject::lighting(glm::vec3 lightPos, glm::vec3 viewVec, glm::vec3 hit) {
+<<<<<<< HEAD
 	float ambientTerm = 0.2;
+=======
+	float ambientTerm = 0;
+>>>>>>> 49b74c0dbbc3576294413a2408a4d905ead9192c
 	float diffuseTerm = 0;
 	float specularTerm = 0;
 	glm::vec3 normalVec = normal(hit);
