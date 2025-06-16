@@ -1,7 +1,6 @@
-# Ray Tracing Project – COSC363 Assignment 2
+# Ray Tracing Project 
 
 Author: Yumeng Shi  
-Student ID: 74341182
 
 ## 📌 Overview
 
