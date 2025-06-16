@@ -55,5 +55,5 @@ This project implements a ray tracer that renders a static 3D scene containing v
 - [DevIL (OpenIL)](http://openil.sourceforge.net/) library for texture support
 
 ### ▶️ Run
--[OpenGL set up](https://github.com/Jadeshi1998/OpenGL_Install/blob/main/OpenGL_VisualStudio.pdf) Check this for how to run.
+- [OpenGL set up](https://github.com/Jadeshi1998/OpenGL_Install/blob/main/OpenGL_VisualStudio.pdf) Check this for how to run.
 
