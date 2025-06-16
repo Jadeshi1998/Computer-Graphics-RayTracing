@@ -30,19 +30,11 @@ This project implements a ray tracer that renders a static 3D scene containing v
 
 ---
 
-## 🛠️ Project Structure
-.
-├── RayTracer.cpp # Main file – handles scene setup & rendering
-├── Sphere.h/.cpp # Sphere object and intersection logic
-├── Plane.h/.cpp # Planes for box walls
-├── Cone.h/.cpp # Custom cone intersection logic
-├── Cylinder.h/.cpp # Cylinder with cap and texture
-├── SceneObject.h/.cpp # Abstract base for all scene objects
-├── Ray.h # Ray struct for tracing
-├── TextureOpenIL.h # Texture loading helper
-├── Texture images/ # Contains image textures for objects
-├── README.md # Project description and instructions
-
+## 🛠️ Project Screen shot
+- Read [Report](https://github.com/Jadeshi1998/Computer-Graphics-RayTracing/blob/main/report/COSC363-Assessment2.pdf)
+  <img width="277" alt="Screenshot 2025-06-17 at 08 08 49" src="https://github.com/user-attachments/assets/6a6c2fb1-70b0-4bfb-9a56-1d35d3aaad01" />
+- Anti Alising Applied
+  <img width="656" alt="Screenshot 2025-06-17 at 08 09 30" src="https://github.com/user-attachments/assets/a5058339-3f37-4306-881c-be21d072081a" />
 
 ---
 
