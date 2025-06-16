@@ -31,4 +31,29 @@ This project implements a ray tracer that renders a static 3D scene containing v
 ---
 
 ## 🛠️ Project Structure
+.
+├── RayTracer.cpp # Main file – handles scene setup & rendering
+├── Sphere.h/.cpp # Sphere object and intersection logic
+├── Plane.h/.cpp # Planes for box walls
+├── Cone.h/.cpp # Custom cone intersection logic
+├── Cylinder.h/.cpp # Cylinder with cap and texture
+├── SceneObject.h/.cpp # Abstract base for all scene objects
+├── Ray.h # Ray struct for tracing
+├── TextureOpenIL.h # Texture loading helper
+├── Texture images/ # Contains image textures for objects
+├── README.md # Project description and instructions
+
+
+---
+
+## 🖥️ How to Run
+
+### ✅ Prerequisites
+
+- C++ compiler supporting C++11 or newer
+- OpenGL & GLUT installed
+- [DevIL (OpenIL)](http://openil.sourceforge.net/) library for texture support
+
+### ▶️ Run
+-[OpenGL set up](https://github.com/Jadeshi1998/OpenGL_Install/blob/main/OpenGL_VisualStudio.pdf) Check this for how to run.
 
